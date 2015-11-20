@@ -1,0 +1,97 @@
+---
+title: "Machine learning Course Project"
+output: html_document
+---
+
+####Problem Overview
+In this paper, we apply machine learning to human activity recognition. The details of the dataset and the problem are at http://groupware.les.inf.puc-rio.br/har.  This is a weight lifting database and six health participants where asked to perform  Unilateral Dumbbell Biceps Curl in five different Classes; where class A represent excercise as per the specification while the rest of the classes are common mistakes while doing the excercise. The objective if study is to predict quality of the dumbbell lifting excerise by using the dataset provided as part of the study.
+
+In machine learning terminology this is a Classification problem with qualitatice variables. Also this is a supervized problem since the training data has classification done.
+
+####Data Cleaning and Preprocessing
+We observe the training data provided in *pml-training.csv* which has dimensions of *19622* x *160*. It can be observed that most of the columns has NAs as the values and hence we consider only those columns which has at least 5% of meaningful qualitative values. Further columns which do not add information to prediction e.g. the sequence number of activity, timestamps, name of the participant are also deleted.
+```{r,echo=TRUE,message=FALSE,results=FALSE,eval=TRUE,warning=FALSE}
+library(caret)
+# Read CSV files
+training <- read.csv("pml-training.csv",na.strings = c("NA","#DIV/0!"),header=TRUE)
+testing <- read.csv("pml-testing.csv",header=TRUE)
+# Initialize which columns to select
+columnSel = rep(FALSE,160)
+for(columnid in 8:160)
+{ # Only columns which has at least 5% of meaningful data are selected
+  if ( sum(is.na(training[,columnid]))/length(training[,columnid]) > 0.95) {
+    columnSel[columnid] = FALSE
+  }
+  else {
+    columnSel[columnid] = TRUE
+  }
+}
+trainingShort <- training[,columnSel]
+```
+Also in order to cross validate the model we divide the dataset into training set and test set in a 60-40 split.
+```{r,echo=TRUE,message=FALSE,results=FALSE,eval=TRUE,warning=FALSE}
+inTrain <- createDataPartition(y = trainingShort$classe,p = 0.6,list =FALSE)
+trainingSet <- trainingShort[inTrain,]
+testSet <- trainingShort[-inTrain,]
+```
+####Model Selection 
+Since this is a classification problem we have options of following models
+
+- KNN
+- Linear Descriminant Analysis (LDA)
+- Quadratic Descriminant Analysis (QDA)
+- Tree based methods e.g. Random Forest.
+
+These models are described in detail in [XXX]. KNN is a non parameteric method where in order to make prediction for $X=x$, $K$ training observations that are close to $x$ are selected. Then $X$ is assigned to a class which has the maximum Probability of accurance in this observations. LDA and QDA use Baye's theorem of classifcation. Both the models assume that the predictors are normally distributed. LDA has assummes that all the predictors have common covirance matrix while QDA assumes that each predictor can have a different covariance matrix. Tree based methods involve segmenting the predictor space into a number of regions.
+
+Before applying LDA or QDA model we randomly check the distribution of the variaous predictors using $qnorm$ and in figure below we can observe that some of the predictors are not normally distributed. As a result we eliminate both LDA and QDA and compare only KNN and Random forest method.
+
+```{r, echo=FALSE, eval=TRUE}
+par(mfrow = c(2, 2) )
+qqnorm(trainingSet$pitch_belt,main = "Q-Q plot for pitch belt")
+qqline(trainingSet$pitch_belt,col= 4,lwd = 3)
+qqnorm(trainingSet$yaw_belt,main = "Q-Q plot for yaw belt")
+qqline(trainingSet$yaw_belt,col= 4,lwd = 3)
+
+qqnorm(trainingSet$magnet_forearm_z,main = "Q-Q plot for Forearm -z")
+qqline(trainingSet$magnet_forearm_z,col= 4,lwd = 3)
+
+qqnorm(trainingSet$roll_forearm,main = "Q-Q plot for Forearm Roll")
+qqline(trainingSet$roll_forearm,col= 4,lwd = 3)
+```
+
+```{r, echo=TRUE, eval=FALSE}
+ctrl2 <- trainControl(method = "repeatedcv",repeats = 5,verboseIter = TRUE)
+modelKNN <- train(classe ~ . , data = trainingSet, method = "knn", preProcess = c("center", "scale"),trControl = ctrl2)
+modelRF <- train(classe ~ . , data = trainingSel, method = "rf", preProcess = c("center", "scale"),trControl = ctrl2)
+```
+Table below compares the out of sample error of the KNN model and RF model. Based on the higher accuracy of RF model we select this as our prediction model. Confustion matrix for the selected model is shown in figure[XXX]
+```{r, echo=TRUE, eval=FALSE }
+outputKNN <- predict(modelKNN,testSet)
+confusionMatrix(outputKNN,testSet$classe)
+
+outputRF <- predict(modelRF,testSet)
+confusionMatrix(outputRF,testSet$classe)
+```
+Out of Sample error for KNN | Out of Sample error for RF
+------------- | -------------
+Table Cell | Cell 2
+
+####Cross Validation
+We first calculate in sample error by applying the model on the training set. Then we calculate out of sample error by applying the model on the testing set. In Table XXX we compare both the errors and as per expectation, in sample error is lesser than the out of sample error.
+```{r, echo=TRUE, eval=FALSE }
+output<- predict(modelRF,testSel)
+confusionMatrix(output,testSet$classe)
+
+outputKNN <- predict(modelKNN,testSet)
+confusionMatrix(outputKNN,testSet$classe)
+```
+
+
+```{r, echo=TRUE, eval=TRUE}
+#answers <- predict(modelRF,testing)
+#confusionMatrix(output,testSet$classe)
+```
+####Conclusion
+In this study we have applied machine learning to weight lifting activity. We have selected the Random Forest tree as a prediction model and predicted the test set with the model. 
+
