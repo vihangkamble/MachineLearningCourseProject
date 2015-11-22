@@ -4,12 +4,12 @@ output: html_document
 ---
 
 ####Problem Overview
-In this paper, we apply machine learning to human activity recognition. The details of the dataset and the problem are at http://groupware.les.inf.puc-rio.br/har.  This is a weight lifting database and six health participants where asked to perform  Unilateral Dumbbell Biceps Curl in five different Classes; where class A represent excercise as per the specification while the rest of the classes are common mistakes while doing the excercise. The objective if study is to predict quality of the dumbbell lifting excerise by using the dataset provided as part of the study.
+In this paper, we apply machine learning to human activity recognition. The details of the dataset and the problem are at http://groupware.les.inf.puc-rio.br/har.  This is a weight lifting database and six health participants where asked to perform  Unilateral Dumbbell Biceps Curl in five different Classes; where class A represent exercise as per the specification while the rest of the classes are common mistakes while doing the exercise. The objective if study is to predict quality of the dumbbell lifting exercise by using the dataset provided as part of the study.
 
-In machine learning terminology this is a Classification problem with qualitatice variables. Also this is a supervized problem since the training data has classification done.
+In machine learning terminology this is a Classification problem with qualitative variables. Also this is a supervized problem since the training data has classification done. Hence we compare all the prediction methods applicable to a supervized classification problem which are KNN, LDA/QDA and decision tree.
 
 ####Data Cleaning and Preprocessing
-We observe the training data provided in *pml-training.csv* which has dimensions of *19622* x *160*. It can be observed that most of the columns has NAs as the values and hence we consider only those columns which has at least 5% of meaningful qualitative values. Further columns which do not add information to prediction e.g. the sequence number of activity, timestamps, name of the participant are also deleted.
+We observe the training data provided in *pml-training.csv* which has dimensions of *19622* x *160*. It can be observed that most of the columns has NAs as the values and hence we consider only those columns which has at least 5% of meaningful values. Further columns which do not add information to prediction e.g. the sequence number of activity, timestamps, name of the participant are also deleted.
 ```{r,echo=TRUE,message=FALSE,results=FALSE,eval=TRUE,warning=FALSE}
 library(caret)
 # Read CSV files
@@ -38,13 +38,13 @@ testSet <- trainingShort[-inTrain,]
 Since this is a classification problem we have options of following models
 
 - KNN
-- Linear Descriminant Analysis (LDA)
-- Quadratic Descriminant Analysis (QDA)
+- Linear Discriminant Analysis (LDA)
+- Quadratic Discriminant Analysis (QDA)
 - Tree based methods e.g. Random Forest.
 
-These models are described in detail in [XXX]. KNN is a non parameteric method where in order to make prediction for $X=x$, $K$ training observations that are close to $x$ are selected. Then $X$ is assigned to a class which has the maximum Probability of accurance in this observations. LDA and QDA use Baye's theorem of classifcation. Both the models assume that the predictors are normally distributed. LDA has assummes that all the predictors have common covirance matrix while QDA assumes that each predictor can have a different covariance matrix. Tree based methods involve segmenting the predictor space into a number of regions.
+These models are described in detail in [An Introduction to Statistical Learning]. KNN is a non parametric method where in order to make prediction for $X=x$, $K$ training observations that are close to $x$ are selected. Then $X$ is assigned to a class which has the maximum Probability of occurrence in this observations. LDA and QDA use Bayes theorem of classification. Both the models assume that the predictors are normally distributed. LDA has assumes that all the predictors have common covariance matrix while QDA assumes that each predictor can have a different covariance matrix. Tree based methods involve segmenting the predictor space into a number of regions.
 
-Before applying LDA or QDA model we randomly check the distribution of the variaous predictors using $qnorm$ and in figure below we can observe that some of the predictors are not normally distributed. As a result we eliminate both LDA and QDA and compare only KNN and Random forest method.
+Before applying LDA or QDA model we randomly check the distribution of the various predictors using $qnorm$ and in figure below by comparing the predictor distribution to the theoretical blue line, we can observe that some of the predictors are not normally distributed. As a result we eliminate both LDA and QDA and compare only KNN and Random forest method.
 
 ```{r, echo=FALSE, eval=TRUE}
 par(mfrow = c(2, 2) )
@@ -63,9 +63,9 @@ qqline(trainingSet$roll_forearm,col= 4,lwd = 3)
 ```{r, echo=TRUE, eval=FALSE}
 ctrl2 <- trainControl(method = "repeatedcv",repeats = 5,verboseIter = TRUE)
 modelKNN <- train(classe ~ . , data = trainingSet, method = "knn", preProcess = c("center", "scale"),trControl = ctrl2)
-modelRF <- train(classe ~ . , data = trainingSel, method = "rf", preProcess = c("center", "scale"),trControl = ctrl2)
+modelRF <- train(classe ~ . , data = trainingSet, method = "rf", preProcess = c("center", "scale"),trControl = ctrl2)
 ```
-Table below compares the out of sample error of the KNN model and RF model. Based on the higher accuracy of RF model we select this as our prediction model. Confustion matrix for the selected model is shown in figure[XXX]
+Table below compares the out of sample error of the KNN model and RF model. Based on the higher accuracy of RF model we select this as our prediction model. 
 ```{r, echo=TRUE, eval=FALSE }
 outputKNN <- predict(modelKNN,testSet)
 confusionMatrix(outputKNN,testSet$classe)
@@ -75,18 +75,20 @@ confusionMatrix(outputRF,testSet$classe)
 ```
 Out of Sample error for KNN | Out of Sample error for RF
 ------------- | -------------
-Table Cell | Cell 2
+0.0399 | 0.0088
 
 ####Cross Validation
-We first calculate in sample error by applying the model on the training set. Then we calculate out of sample error by applying the model on the testing set. In Table XXX we compare both the errors and as per expectation, in sample error is lesser than the out of sample error.
+We first calculate in sample error by applying the selected RF model on the training set. Then we calculate out of sample error by applying the model on the testing set. In Table below we compare both the errors and as per expectation, in sample error is lesser than the out of sample error.
 ```{r, echo=TRUE, eval=FALSE }
-output<- predict(modelRF,testSel)
-confusionMatrix(output,testSet$classe)
+outputTest<- predict(modelRF,testSet)
+confusionMatrix(outputTest,testSet$classe)
 
-outputKNN <- predict(modelKNN,testSet)
-confusionMatrix(outputKNN,testSet$classe)
+outputTrain <- predict(modelRF,trainingSet)
+confusionMatrix(outputTrain,trainingSet$classe)
 ```
-
+Out of Sample error for RF | In Sample error for RF
+------------- | -------------
+0.0088 | 0.0
 
 ```{r, echo=TRUE, eval=TRUE}
 #answers <- predict(modelRF,testing)
